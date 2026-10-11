@@ -22,6 +22,7 @@ from memanto.app.clients.moorcheh import get_moorcheh_client
 from memanto.app.config import get_data_dir, settings
 from memanto.app.core import agent_namespace
 from memanto.app.services.session_service import get_session_service
+from memanto.app.utils.atomic_write import atomic_write_text
 from memanto.app.utils.errors import MemoryOperationError
 from memanto.app.utils.temporal_helpers import (
     format_current_local_time,
@@ -207,8 +208,10 @@ Format the output as a Markdown report:
         else:
             summary_path = self.summaries_dir / f"{agent_id}_{date}.md"
 
-        with open(summary_path, "w", encoding="utf-8") as f:
-            f.write(summary_text)
+        # Derived reports contain the same private content as session memories.
+        # Publish with owner-only permissions, including when replacing an
+        # older report that was created with a permissive process umask.
+        atomic_write_text(summary_path, summary_text)
 
         # Append visual insights (timeline, type distribution, confidence)
         try:
@@ -337,8 +340,7 @@ Format the output as a Markdown report:
 
         conflicts_dir = get_conflicts_dir()
         json_path = conflicts_dir / f"{agent_id}_{date}_conflicts.json"
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(conflicts_data, f, indent=2, default=str)
+        atomic_write_text(json_path, json.dumps(conflicts_data, indent=2, default=str))
 
         return {
             "status": "success",
