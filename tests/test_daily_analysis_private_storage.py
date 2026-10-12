@@ -15,6 +15,7 @@ pytestmark = pytest.mark.skipif(os.name == "nt", reason="POSIX permissions requi
 
 @pytest.fixture
 def service(tmp_path, monkeypatch):
+    """Isolate reports and backend calls under a typical permissive POSIX umask."""
     sessions = tmp_path / "sessions"
     sessions.mkdir(mode=0o700)
     session = sessions / "agent-1_2026-10-10_001_summary.md"
@@ -42,6 +43,7 @@ def service(tmp_path, monkeypatch):
 @pytest.mark.parametrize("existing", [False, True])
 @pytest.mark.parametrize("custom_output", [False, True])
 def test_daily_summary_is_owner_only(service, tmp_path, existing, custom_output):
+    """New and replaced summaries stay private at default and custom paths."""
     path = (
         tmp_path / "custom.md"
         if custom_output
@@ -63,6 +65,7 @@ def test_daily_summary_is_owner_only(service, tmp_path, existing, custom_output)
 
 @pytest.mark.parametrize("existing", [False, True])
 def test_conflict_report_is_owner_only(service, tmp_path, existing):
+    """Saving conflict JSON preserves its contents with owner-only access."""
     path = tmp_path / "conflicts" / "agent-1_2026-10-10_conflicts.json"
     if existing:
         path.parent.mkdir()
@@ -78,8 +81,13 @@ def test_conflict_report_is_owner_only(service, tmp_path, existing):
 
 
 def test_serialization_failure_preserves_previous_conflict_report(service, tmp_path):
+    """Failed serialization must not truncate or replace a valid report."""
+
     class Unserializable:
+        """Inject a failure in the JSON encoder's string fallback."""
+
         def __str__(self):
+            """Fail deterministically before the report can be published."""
             raise ValueError("serialization failed")
 
     path = tmp_path / "conflicts" / "agent-1_2026-10-10_conflicts.json"

@@ -336,6 +336,7 @@ Format the output as a Markdown report:
     def _save_conflict_report(
         self, agent_id: str, date: str, conflicts_data: list[dict[str, Any]]
     ) -> dict[str, Any]:
+        """Persist a complete owner-only report and return its path and count."""
         from memanto.app.config import get_conflicts_dir
 
         conflicts_dir = get_conflicts_dir()
